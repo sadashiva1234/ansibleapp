@@ -1,0 +1,53 @@
+---
+
+- name: "directory finder"
+  hosts: 127.0.0.1
+  connection: local
+
+  vars:
+
+    orders:
+      'Bob':
+        food: 'burrito'
+        dst: '/tmp/example-homes/home/bob/plate'
+      'Jack':
+        food: 'fish'
+        dst: '/tmp/example-homes/home/jack/plate'
+      'Mary':
+        food: 'fish'
+        dst: '/tmp/example-homes/mary/plate'
+
+
+  tasks:
+
+    - name: "describe orders"
+      debug:
+        var: orders
+
+    - name: "describe orders | dict2items"
+      debug:
+        var: orders | dict2items
+
+    - name: "find the food"
+      find:
+        paths: "/tmp/example"
+        recurse: yes
+        file_type: file
+        patterns:  "{{ item.value.food }}"
+      with_items:
+         - "{{ orders | dict2items }}"
+      register: find_food_results
+
+    - name: "describe find_food_results"
+      debug:
+        var: find_food_results
+
+    - name: "narrow down our findings to paths that contain 'foods/lunch'"
+      set_fact:
+        food_lunch_directory_paths: "{{ food_lunch_directory_paths | default([]) }} + [ '{{ item.path }}' ]"
+      with_items: "{{ find_food_results.results | map(attribute='files') | list }}"
+      when: "'foods/lunch' in item.path"
+
+    - name: "describe our food/lunch paths"
+      debug:
+        var: food_lunch_directory_paths
